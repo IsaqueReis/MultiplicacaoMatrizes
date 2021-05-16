@@ -3,33 +3,30 @@ Comparar o desempenho de processamento simétrico (SMP) vs. Assimétrico (ASMP).
 
 
 # Observações Gerais 
-Exemplo de matriz 3x3 será reconhecidas pelo numero definido pelo #define e linhas e colunas devem seguir o valor do define ou terá erro
 
-Exemplo de matriz e define
+  Repositório
 
-#define MTZ_MAX 3
+    Uso de repositório para versior as versões(Git)
+    Commitar só o que funcionar
 
-1 2 3
+  Estrutura do arquivo
 
-4 5 6
+    Sintaxe e semântica padrão C em Portuquês
+    Estrutura com protótipos no topo no inicio e depois criação do .h com os protótipos
+    Escopos com chave de abertura na mesma linha da declaração do escopo
 
-7 8 9
+# Sobre implementação(Pode mudar*)
 
-Repositório
+  Preferencia Linux (SO em vez do WSL)
 
-Uso de repositório para versior as versões(Git)
-Commitar só o que funcionar
+  Exemplo de matriz 3x3 será reconhecidas pelo numero definido pelo #define e linhas e colunas devem seguir o valor do define ou terá erro
 
-Estrutura do arquivo
+    #define MTZ_MAX 3
+    
+    1 2 3 
+    4 5 6 
+    7 8 9 
 
-Sintaxe e semântica padrão C em Portuquês
-Estrutura com protótipos no topo no inicio e depois criação do .h com os protótipos
-Escopos com chave de abertura na mesma linha da declaração do escopo
+  Matrizes serão salvas em um vetor com n*n inteiros
 
-Sobre implementação(Pode mudar*)
-
-Matrizes serão salvas em um vetor com n*n inteiros
-
-Comunicação entre threads usando semáforo mutex
-
-Preferencia Linux (SO em vez do WSL)
+  Comunicação entre threads usando semáforo mutex e memória compartilhada
