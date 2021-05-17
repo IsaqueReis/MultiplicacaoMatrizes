@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 #define N 3
@@ -6,6 +7,10 @@
 int *multiplicaMatriz(int n[N*N], int m[N*N]){
 
     int *resul = (int *) malloc(sizeof(int) * N*N);
+    if(resul == NULL) {
+        printf("Erro ao alocar memoria!");
+        return NULL;
+    }
 
     for(int i=0; i<N*N; i++)
         resul[i] = 0;
@@ -16,6 +21,25 @@ int *multiplicaMatriz(int n[N*N], int m[N*N]){
         for(int j=0; j<N; j++)
             for(int k=0; k<N; k++)
                 resul[N*i + j] += n[N*i + k] * m[N*k + j];
+
+    return resul;
+}
+
+int *potenciaMatriz(int n[N*N], int potencia){
+
+    int *tmp;
+    int *resul = (int *) malloc(sizeof(int) * N*N);
+    if(resul == NULL) {
+        printf("Erro ao alocar memoria!");
+        return NULL;
+    }
+    memcpy(resul, n, sizeof(int) * N*N);
+
+    for(int i=1; i<potencia; i++) {
+        tmp = multiplicaMatriz(n, resul);
+        free(resul);
+        resul = tmp;
+    }
 
     return resul;
 }
@@ -46,13 +70,20 @@ int main(int argc, char *argv[]) {
 
     int n[N*N] = { 2, 5, 8, 7, 4, 3, 9, 3, 4 };
     int m[N*N] = { 2, 7, 9, 3, 1, 1, 1, 5, 5 };
-    int* r = multiplicaMatriz(n,m);
 
+    printf("nXm:\n");
     imprimeMatriz(n);
     printf("\n");
     imprimeMatriz(m);
     printf("\n");
-    imprimeMatriz(r);
+    imprimeMatriz(multiplicaMatriz(n,m));
+    printf("\n");
+
+    // obs: se for alto grau de potência ocorre overflow e com isso geração de números negativos...
+    printf("n^10:\n");
+    imprimeMatriz(n);
+    printf("\n");
+    imprimeMatriz(potenciaMatriz(n, 3));
     printf("\n");
 
     return 0;
