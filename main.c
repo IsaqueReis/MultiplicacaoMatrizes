@@ -11,7 +11,7 @@ int *multiplicaMatriz(int n[N*N], int m[N*N]){
         resul[i] = 0;
 
     // i seleciona a iésima e j a jésima coluna da matriz resultante,
-    //      operações dada por iterações de k calculam o resultado aplicado a n e m.
+    //      operações dadas por iterações de k que calculam o resultado aplicado a n e m.
     for(int i=0; i<N; i++)
         for(int j=0; j<N; j++)
             for(int k=0; k<N; k++)
