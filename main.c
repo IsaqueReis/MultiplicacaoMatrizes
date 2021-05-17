@@ -44,8 +44,8 @@ void imprimeMatriz(int *r){
 
 int main(int argc, char *argv[]) {
 
-    int n[N*N] = { 2, 5, 8, 7, 4, 3, 3, 3, 4 };
-    int m[N*N] = { 2, 2, 2, 2, 2, 2, 2, 2, 2 };
+    int n[N*N] = { 2, 5, 8, 7, 4, 3, 9, 3, 4 };
+    int m[N*N] = { 2, 7, 9, 3, 1, 1, 1, 5, 5 };
     int* r = multiplicaMatriz(n,m);
 
     imprimeMatriz(n);
