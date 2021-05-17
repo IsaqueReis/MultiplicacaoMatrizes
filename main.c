@@ -3,10 +3,11 @@
 #include <stdlib.h>
 
 #define N 3
+typedef unsigned long long int ulli;
 
-int *multiplicaMatriz(int n[N*N], int m[N*N]){
+ulli *multiplicaMatriz(ulli n[N*N], ulli m[N*N]){
 
-    int *resul = (int *) malloc(sizeof(int) * N*N);
+    ulli *resul = (ulli *) malloc(sizeof(ulli) * N*N);
     if(resul == NULL) {
         printf("Erro ao alocar memoria!");
         return NULL;
@@ -25,15 +26,15 @@ int *multiplicaMatriz(int n[N*N], int m[N*N]){
     return resul;
 }
 
-int *potenciaMatriz(int n[N*N], int potencia){
+ulli *potenciaMatriz(ulli n[N*N], ulli potencia){
 
-    int *tmp;
-    int *resul = (int *) malloc(sizeof(int) * N*N);
+    ulli *tmp;
+    ulli *resul = (ulli *) malloc(sizeof(ulli) * N*N);
     if(resul == NULL) {
         printf("Erro ao alocar memoria!");
         return NULL;
     }
-    memcpy(resul, n, sizeof(int) * N*N);
+    memcpy(resul, n, sizeof(ulli) * N*N);
 
     for(int i=1; i<potencia; i++) {
         tmp = multiplicaMatriz(n, resul);
@@ -44,18 +45,18 @@ int *potenciaMatriz(int n[N*N], int potencia){
     return resul;
 }
 
-void imprimeMatriz(int *r){
+void imprimeMatriz(ulli *r){
 
     int primeiro = 1;
 
     for(int i=0; i<N; i++) {
         for (int j=0; j<N; j++) {
             if (primeiro == 1) {
-                printf("%d", r[N*i + j]);
+                printf("%llu", r[N*i + j]);
                 primeiro = 0;
             }
             else{
-                printf(" %d", r[N*i + j]);
+                printf(" %llu", r[N*i + j]);
             }
 
             if (j + 1 == N) {
@@ -68,8 +69,8 @@ void imprimeMatriz(int *r){
 
 int main(int argc, char *argv[]) {
 
-    int n[N*N] = { 2, 5, 8, 7, 4, 3, 9, 3, 4 };
-    int m[N*N] = { 2, 7, 9, 3, 1, 1, 1, 5, 5 };
+    ulli n[N*N] = { 2, 5, 8, 7, 4, 3, 9, 3, 4 };
+    ulli m[N*N] = { 2, 7, 9, 3, 1, 1, 1, 5, 5 };
 
     printf("nXm:\n");
     imprimeMatriz(n);
@@ -83,7 +84,7 @@ int main(int argc, char *argv[]) {
     printf("n^10:\n");
     imprimeMatriz(n);
     printf("\n");
-    imprimeMatriz(potenciaMatriz(n, 3));
+    imprimeMatriz(potenciaMatriz(n, 10));
     printf("\n");
 
     return 0;
