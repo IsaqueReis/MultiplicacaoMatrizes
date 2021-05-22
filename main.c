@@ -1,9 +1,106 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
-#define N 3
+#define N 10
+#define M_FILENAME "m.dat"
+#define N_FILENAME "n.dat"
+
+#define numeroAleatorioEntre(min, max) ((rand() % (max - min + 1)) + min)
+
 typedef unsigned long long int ulli;
+
+void imprimeMatriz(ulli *r){
+
+    int primeiro = 1;
+
+    for(int i=0; i<N; i++) {
+        for (int j=0; j<N; j++) {
+            if (primeiro == 1) {
+                printf("%llu", r[N*i + j]);
+                primeiro = 0;
+            }
+            else{
+                printf(" %llu", r[N*i + j]);
+            }
+
+            if (j + 1 == N) {
+                printf("\n");
+                primeiro = 1;
+            }
+        }
+    }
+}
+
+void inicializaArquivoDeMatriz(char *filename){
+
+    FILE *fp = fopen(filename, "r");
+
+    if(fp != NULL){ // o arquivo já existe
+        printf("O arquivo de matriz %s já existe!\n", filename);
+        return;
+    } 
+
+    if(fp != NULL);
+        remove(filename);
+
+    fp = fopen(filename, "a+");
+
+    if(!fp){
+        perror("Criação do arquivo de matriz");
+        exit(EXIT_FAILURE);
+    }
+
+    srand(time(NULL)); //gera uma seed baseada no tempo atual em milisegundos
+
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            j == N 
+            ? fprintf(fp, "%d",  numeroAleatorioEntre(1, N)) 
+            : fprintf(fp, "%d ", numeroAleatorioEntre(1, N));  
+        }
+        fprintf(fp,"\n");
+    }
+
+    fflush(fp);
+    fclose(fp);
+}
+
+ulli *leArquivoDeMatriz(char *filename){
+
+    FILE *fp = fopen(filename, "r");
+    ulli *ret =  (ulli *) calloc(1, sizeof(ulli) * N*N);
+    int k = 0;
+
+    if(!ret){
+        fprintf(stderr, "Erro de alocação!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if(!fp){ // o arquivo não existe
+        inicializaArquivoDeMatriz(filename);
+        if( (fp = fopen(filename, "r")) == NULL ){
+            perror("Leitura arquivo de Matriz");
+            exit(EXIT_FAILURE);
+        }
+    } 
+
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            j == N 
+            ? fscanf(fp, "%llu", &ret[k]) 
+            : fscanf(fp, "%llu ", &ret[k]); 
+            k++;
+        }
+        fgetc(fp); //le o '\n' e o descarta
+    }
+    
+    printf("Matriz lida do arquivo %s:\n", filename);
+    imprimeMatriz(ret);
+    return ret;
+}
 
 ulli *multiplicaMatriz(ulli n[N*N], ulli m[N*N]){
 
@@ -45,32 +142,10 @@ ulli *potenciaMatriz(ulli n[N*N], ulli potencia){
     return resul;
 }
 
-void imprimeMatriz(ulli *r){
-
-    int primeiro = 1;
-
-    for(int i=0; i<N; i++) {
-        for (int j=0; j<N; j++) {
-            if (primeiro == 1) {
-                printf("%llu", r[N*i + j]);
-                primeiro = 0;
-            }
-            else{
-                printf(" %llu", r[N*i + j]);
-            }
-
-            if (j + 1 == N) {
-                printf("\n");
-                primeiro = 1;
-            }
-        }
-    }
-}
-
 int main(int argc, char *argv[]) {
 
-    ulli n[N*N] = { 2, 5, 8, 7, 4, 3, 9, 3, 4 };
-    ulli m[N*N] = { 2, 7, 9, 3, 1, 1, 1, 5, 5 };
+    ulli *n = leArquivoDeMatriz(N_FILENAME);
+    ulli *m = leArquivoDeMatriz(M_FILENAME);
 
     printf("nXm:\n");
     imprimeMatriz(n);
