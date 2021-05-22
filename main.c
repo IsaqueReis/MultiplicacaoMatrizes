@@ -4,7 +4,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define N 10
+#define N 1000
 #define M_FILENAME "m.dat"
 #define N_FILENAME "n.dat"
 
@@ -59,7 +59,7 @@ void inicializaArquivoDeMatriz(char *filename){
         for(int j = 0; j < N; j++) {
             j == N 
             ? fprintf(fp, "%d",  numeroAleatorioEntre(1, N)) 
-            : fprintf(fp, "%d ", numeroAleatorioEntre(1, N));  
+            : fprintf(fp, "%d,", numeroAleatorioEntre(1, N));  
         }
         fprintf(fp,"\n");
     }
@@ -91,7 +91,7 @@ ulli *leArquivoDeMatriz(char *filename){
         for(int j = 0; j < N; j++) {
             j == N 
             ? fscanf(fp, "%llu", &ret[k]) 
-            : fscanf(fp, "%llu ", &ret[k]); 
+            : fscanf(fp, "%llu,", &ret[k]); 
             k++;
         }
         fgetc(fp); //le o '\n' e o descarta
