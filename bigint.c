@@ -1,16 +1,4 @@
-#include <stdlib.h>
-#include <string.h>
 #include "bigint.h"
-
-#define MAX_CASAS_DECIM_NO_BIGINT 9
-#define POW_10_9 1000000000
-
-struct bigInt{
-    char sinal;
-    int qntNos;
-    int *valores;
-};
-typedef struct bigInt * BigInt;
 
 BigInt criaBigInt(char sinal, int qntNos, int* valores){
     BigInt resul = (BigInt) malloc(sizeof(struct bigInt));
@@ -32,6 +20,7 @@ BigInt criaBigInt(char sinal, int qntNos, int* valores){
     }
     return resul;
 }
+
 BigInt novoBigIntPorStr(char *strnum){
     int lenTmp = strlen(strnum);
     if(lenTmp == 0)
@@ -81,10 +70,18 @@ BigInt novoBigIntPorStr(char *strnum){
     }
     return bigI;
 }
+
 BigInt novoBigIntPorLLInt(long long num){
-    // 22 � a quantidade maxima de casas de um long long com sobra
+    // 22 é a quantidade maxima de casas de um long long com sobra
     char strnum[23];
     sprintf(strnum, "%lld", num);
+    return novoBigIntPorStr(strnum);
+}
+
+BigInt novoBigIntPorULLInt(unsigned long long num){
+    // 22 é a quantidade maxima de casas de um long long com sobra
+    char strnum[23];
+    sprintf(strnum, "%llu", num);
     return novoBigIntPorStr(strnum);
 }
 
@@ -96,14 +93,16 @@ void deletaBigInt(BigInt *a){
         *a = NULL;
     }
 }
+
 void imprimeBigInt(BigInt a){
     if(a == NULL)
         return;
-    printf("\n(%c, %d, [ ", a->sinal, a->qntNos);
+    //printf("\n(%c, %d, [ ", a->sinal, a->qntNos);
     for(int i = 0; i < a->qntNos; i++)
         printf("%d ", a->valores[i]);
-    printf("])");
+    //printf("])");
 }
+
 int stringBigInt(char *str, BigInt a){
     *str = '\0';
     if(a == NULL)
@@ -161,6 +160,7 @@ int somaBigIntSinalDiferente(BigInt *r, BigInt a, BigInt b){
 
     return (*r) != NULL;
 }
+
 int somaBigIntSinalIgual(BigInt *r, BigInt a, BigInt b){
     if(a == NULL || b == NULL){
         *r = NULL;
@@ -202,6 +202,7 @@ int somaBigIntSinalIgual(BigInt *r, BigInt a, BigInt b){
 
     return (*r) != NULL;
 }
+
 int somaBigInt(BigInt *r, BigInt a, BigInt b){
     if(a == NULL || b == NULL || a->qntNos == 0 || b->qntNos == 0){
         *r = NULL;
@@ -338,6 +339,7 @@ int multiplicaBigIntNosIguais(BigInt *r, BigInt a, BigInt b){
     *r = R;
     return ok;
 }
+
 int multiplicaBigInt(BigInt *r, BigInt a, BigInt b) {
     if(a == NULL || b == NULL)
         return 0;
