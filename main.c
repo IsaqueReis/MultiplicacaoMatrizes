@@ -1,35 +1,31 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include "utilidades.h"
-#include <sys/types.h>
-#include <sys/wait.h>
+#include "main.h"
 
-#define N 1000
-#define OUTPUT_DIR "output"
-#define INPUT_DIR "input"
-#define M_FILENAME "m.dat"
-#define N_FILENAME "n.dat"
-#define R_FILENAME "r.dat"
+sem_t mutex[3]; //semáforo para as threads;
+ulli *m, *n, *mE10, *nE10, *r; //matrizes m e n, m elevado a 10 potencia, n elevado a decima potencia e r
+bool finalizou = false, finalizouCalculo = false, imprimindoR = false;
+ulli progresso = 0;
+char strProgresso[BUFFER_BARRA_PROGRESSO] = BARRA_DE_PROGRESSO;
+Matriz matrizAImprimir;
 
-#define numeroAleatorioEntre(min, max) ((rand() % (max - min + 1)) + min)
+double calculaOTempoEmSegundos(struct timespec t1, struct timespec t2) {
+    return (((NANO_SEGUNDO_PARA_SEGUNDO) * (t2.tv_sec - t1.tv_sec) +
+           ((t2.tv_nsec) - (t1.tv_nsec))) / 
+           ((double) (NANO_SEGUNDO_PARA_SEGUNDO)));  //obtem o tempo em segundos
+}
 
-typedef unsigned long long int ulli;
+ulli *copiarMatriz(ulli *entrada, size_t tamanhoMatriz) {
 
-typedef struct potenciacaoArgs
-{
-    char *mtzName;
-    ulli *n;
-    ulli potencia;
-} PotenciacaoArgs;
+    ulli *ret = (ulli *) calloc(1, tamanhoMatriz);
 
-sem_t mutex; //semáforo para as threads;
-int progresso = 0;
-int finalizou = 0;
+    if(!ret) {
+        printf("Erro ao alocar memoria!");
+        return NULL;
+    }
+
+    memcpy(ret, entrada, tamanhoMatriz);
+
+    return ret;
+}
 
 void imprimeMatriz(ulli *r){
 
@@ -53,24 +49,36 @@ void imprimeMatriz(ulli *r){
     }
 }
 
-void inicializaArquivoDeMatriz(char *filename){
+double calcularProgresso()
+{
+    double ret = ((((progresso) / ((N * N * N * 19.0))) * (100)));
+    int posicaoBarra = (int) round(((ret * 50) / (100)));
 
-    FILE *fp = fopen(filename, "r");
+    for(int i = 1; i <= posicaoBarra; i++)
+        strProgresso[i] = '#';
+
+    return ret;
+}
+
+void inicializaArquivoDeMatriz(char *nomeArquivo){
+
+    FILE *fp = fopen(nomeArquivo, "r");
 
     if(fp != NULL){ // o arquivo já existe
         //printf("O arquivo de matriz %s já existe!Removendo...\n", filename);
-        remove(filename);
+        remove(nomeArquivo);
         //printf("Arquivo removido com sucesso!\n");
     } 
 
-    fp = fopen(filename, "a+");
+    fp = fopen(nomeArquivo, "a+");
 
     if(!fp){
         perror("Criação do arquivo de matriz");
         exit(EXIT_FAILURE);
     }
 
-    srand(time(NULL)); //gera uma seed baseada no tempo atual em milisegundos
+    //gera uma seed baseada no tempo atual e id da thread atual, em milisegundos
+    srand(time(NULL) * (int) pthread_self()); 
 
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
@@ -85,17 +93,17 @@ void inicializaArquivoDeMatriz(char *filename){
     fclose(fp);
 }
 
-void escreverArquivoDeMatriz(char *filename, ulli *mtz){
+void escreverArquivoDeMatriz(char *nomeArquivo, ulli *mtz){
 
-    FILE *fp = fopen(filename, "r");
+    FILE *fp = fopen(nomeArquivo, "r");
 
     if(fp != NULL){ // o arquivo já existe
         //printf("O arquivo de matriz %s já existe!Removendo...\n", filename);
-        remove(filename);
+        remove(nomeArquivo);
         //printf("Arquivo removido com sucesso!\n");
     } 
 
-    fp = fopen(filename, "a+");
+    fp = fopen(nomeArquivo, "a+");
 
     if(!fp){
         perror("Criação do arquivo de matriz");
@@ -117,15 +125,15 @@ void escreverArquivoDeMatriz(char *filename, ulli *mtz){
     fclose(fp);
 }
 
-ulli *leArquivoDeMatriz(char *filename){
+ulli *leArquivoDeMatriz(char *nomeArquivo){
 
     FILE *fp;
     int k = 0;
     ulli *ret =  (ulli *) calloc(1, sizeof(ulli) * N*N);
 
-    inicializaArquivoDeMatriz(filename);
+    inicializaArquivoDeMatriz(nomeArquivo);
 
-    if( (fp = fopen(filename, "r")) == NULL ){
+    if( (fp = fopen(nomeArquivo, "r")) == NULL ){
         perror("Leitura arquivo de Matriz");
         exit(EXIT_FAILURE);
     }
@@ -145,14 +153,14 @@ ulli *leArquivoDeMatriz(char *filename){
         fgetc(fp); //le o '\n' e o descarta
     }
     
-    printf("Matriz lida do arquivo %s:\n", filename);
-    //imprimeMatriz(ret);
+    printf("Matriz lida do arquivo %s.\n", nomeArquivo);
     return ret;
 }
 
 ulli *multiplicaMatriz(ulli n[N*N], ulli m[N*N]){
 
     ulli *resul = (ulli *) malloc(sizeof(ulli) * N*N);
+
     if(resul == NULL) {
         printf("Erro ao alocar memoria!");
         return NULL;
@@ -167,99 +175,154 @@ ulli *multiplicaMatriz(ulli n[N*N], ulli m[N*N]){
         for(int j=0; j<N; j++) {
             for(int k=0; k<N; k++) {
                 resul[N*i + j] += n[N*i + k] * m[N*k + j];
+                progresso++;
             }
         }
-        progresso += i;
     }
 
     return resul;
 }
 
-void *operacoesIo(void *args)
-{
-    sem_wait(&mutex);
-
-    sem_post(&mutex);
-}
-
-ulli *potenciaMatriz(char *mtzName, ulli n[N*N], ulli potencia){
+ulli *potenciaMatriz(char *nomeMatriz, ulli n[N*N], ulli potencia){
 
     ulli *tmp;
-    ulli *resul = (ulli *) malloc(sizeof(ulli) * N*N);
-    char contadorItrStr[TAMANHO_BUFFER_STR_NUMERICA];
-
-    if(resul == NULL) {
-        printf("Erro ao alocar memoria!");
-        return NULL;
-    }
-    memcpy(resul, n, sizeof(ulli) * N*N);
+    ulli *resul = copiarMatriz(n, sizeof(ulli) * N*N);
 
     for(int i=1; i<potencia; i++) {
         tmp = multiplicaMatriz(n, resul);
         free(resul);
         resul = tmp;
-        sprintf(contadorItrStr, "%d", i);
-        char *filename = concatenarStrings(4, mtzName, "_", contadorItrStr, 
-                                                                   ".dat");
-        escreverArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
-                                              OUTPUT_DIR, filename), resul);
-        progresso++;
     }
-
-    finalizou = 1;
+    
     return resul;
 }
 
-void *testeThread(void *args)
-{
-    PotenciacaoArgs *pArgs = (PotenciacaoArgs*) args;
+//Thread responsável por carregar os valores das matrizes M e N
+void *tCarregarMatrizes(void *args) {
 
-    sem_wait(&mutex);
-    potenciaMatriz(pArgs->mtzName, pArgs->n, pArgs->potencia);
-    sem_post(&mutex);
+    sem_wait(&mutex[0]); //bloqueia as threads dependentes de M 
+
+    m = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
+                                  DIRETORIO_ENTRADA, NOME_ARQUIVO_M));
+
+    sem_post(&mutex[0]);
+
+    sem_wait(&mutex[1]); //bloqueia as threads dependentes de N
+
+    n = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
+                                  DIRETORIO_ENTRADA, NOME_ARQUIVO_N));
+
+    sem_post(&mutex[1]);
+}
+
+void *tImprimeArquivos(void *args){
+
+    while(true) {
+
+        if(finalizouCalculo) { //espera que R seja calculado
+            
+            imprimindoR = true;
+
+            printf("Escrevendo o arquivo da matriz resultante...\n");
+
+            escreverArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
+                                           DIRETORIO_SAIDA, NOME_ARQUIVO_R), r);
+
+            printf("Resultado Calculo: \n");
+
+            imprimeMatriz(r);
+            printf("\n");
+
+            finalizou = true;
+            finalizouCalculo = false;
+            imprimindoR = false;
+
+            break;
+        }
+
+        //sprintf(contadorItrStr, "%d", i+1);
+        //char *nomeArquivo = concatenarStrings(4, nomeMatriz, "_", contadorItrStr, 
+        //                                                                ".dat");
+        //                                                                
+        //escreverArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
+        //                                      OUTPUT_DIR, filename), resul);
+        //    char contadorItrStr[TAMANHO_BUFFER_STR_NUMERICA];
+    }
+}
+
+void *tPotencializao(void *args) {
+
+    
+    sem_wait(&mutex[2]); //bloqueia a thread que calcula o resultado final até que tenha-se M e N potenciado.
+
+    sem_wait(&mutex[0]); //aguarda M
+    mE10 = potenciaMatriz(NOME_ARQUIVO_M, m, POTENCIA);
+    sem_post(&mutex[0]);
+
+    sem_wait(&mutex[1]); //aguarda N
+    nE10 = potenciaMatriz(NOME_ARQUIVO_N, n, POTENCIA);
+    sem_post(&mutex[1]);
+    
+    sem_post(&mutex[2]);
+}
+
+void *tCalculaR(void *args) { //1.000.000.000
+
+    sem_wait(&mutex[2]);
+
+    r = multiplicaMatriz(mE10, nE10);
+    finalizouCalculo = true;
+
+    sem_post(&mutex[2]);
+}
+
+void gerenciaSemaforos(ComandoSemaforo comando) {
+    for(int i = 0; i < 3; i++) {
+        if(comando == Inicializa)
+            sem_init(&mutex[i], 0, 1);
+        else if(comando == Destroi)
+            sem_destroy(&mutex[i]);
+    } 
 }
 
 int main(int argc, char *argv[]) {
 
-    pthread_t t1, t2;
-    ulli *n = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
-                                                    INPUT_DIR, N_FILENAME));
-    //ulli *m = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
-    //                                                INPUT_DIR, M_FILENAME));
+    pthread_t t1, t2, t3, t4;
+    struct timespec inicioProcessamento, fimProcessamento; 
 
-    //printf("nXm:\n");
-    //imprimeMatriz(n);
-    //printf("\n");
-    //imprimeMatriz(m);
-    //printf("\n");
-    //imprimeMatriz(multiplicaMatriz(n,m));
-   //printf("\n");
+    clock_gettime(CLOCK_MONOTONIC, &inicioProcessamento); //pega o tempo inicial
 
-    //obs: se for alto grau de potência ocorre overflow e com isso geração de números negativos...
-    //printf("n^10:\n");
-    //imprimeMatriz(n);
-    //printf("\n");
+    gerenciaSemaforos(Inicializa);
 
-    PotenciacaoArgs args = { "n", n, 10 };
-    //PotenciacaoArgs args2 = { "m", m, 10 };
-    sem_init(&mutex, 0, 1);
+    pthread_create(&t1,NULL,tCarregarMatrizes, (void*)(0));
+    pthread_create(&t2,NULL,tPotencializao,    (void*)(0));
+    pthread_create(&t3,NULL,tCalculaR,         (void*)(0));
+    pthread_create(&t4,NULL,tImprimeArquivos,  (void*)(0));
 
-    pthread_create(&t1,NULL,testeThread,&args);
-    //pthread_create(&t2,NULL,testeThread,&args2);
+    printf("Inicializando o cálculo de potenciação de matrizes [R = M^10 * N^10]...\n");
 
-    while(1) {
-        printf("\rProcessando [%.2f]\r",  progresso / 10000.0);
-        fflush(stdout);
-        if(finalizou)
-            break;
+    while(true) {
+        if(!imprimindoR) {
+            double progressoAtual = calcularProgresso();
+            printf("\r%s %.2f %%\r", strProgresso, progressoAtual);
+            fflush(stdout);
+            if(finalizou)
+                break;
+        }
     }
 
     pthread_join(t1,NULL);
-    //pthread_join(t2,NULL);
-    ////escreverArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
-    ////                                        OUTPUT_DIR, R_FILENAME), r);
-    sem_destroy(&mutex);
+    pthread_join(t2,NULL);
+    pthread_join(t3,NULL);
+    pthread_join(t4,NULL);
 
-    printf("\n");
+    gerenciaSemaforos(Destroi);
+
+    
+    clock_gettime(CLOCK_MONOTONIC, &fimProcessamento); //marca o fim da execução
+    
+    printf("\rCalculo Finalizado! Tempo de execução: [%.2f segundos]\r\n", 
+          calculaOTempoEmSegundos(inicioProcessamento, fimProcessamento));
+
     return 0;
 }

@@ -44,7 +44,7 @@ char *unirStrings(char delimitador, int argc,  ... ) {
         
     for(int i = 0; i < argc; i++) {
         char *s = va_arg(valist, char*);
-
+        
         if(i == argc - 1)
             sprintf(tmp, "%s", s);
         else 
