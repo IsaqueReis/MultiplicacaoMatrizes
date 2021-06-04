@@ -2,6 +2,7 @@
 Comparar o desempenho de processamento simétrico (SMP) vs. Assimétrico (ASMP). 
 
 # Compilar e Executar
+    sudo chmod 777 compile-and-execute.sh
     ./compile-and-execute.sh
   
 # Observações Gerais 
