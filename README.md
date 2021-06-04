@@ -1,7 +1,9 @@
 # Multiplicação de Matrizes
 Comparar o desempenho de processamento simétrico (SMP) vs. Assimétrico (ASMP). 
 
-
+# Compilar e Executar
+    Executar o script compile-and-execute.sh
+  
 # Observações Gerais 
 
   Repositório

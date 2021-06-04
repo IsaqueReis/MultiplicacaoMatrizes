@@ -11,10 +11,12 @@
 #include <stdbool.h>
 #include <math.h>
 
-#define N 500
+#define N 5000
+#define MAX_OPERACOES 125000000000
 #define POTENCIA 10
 #define BUFFER_BARRA_PROGRESSO 53
 #define NANO_SEGUNDO_PARA_SEGUNDO 1000000000
+#define MAX_ELEMENTOS_FILA_IMPRESSAO 20
 
 #define DIRETORIO_SAIDA "output"
 #define DIRETORIO_ENTRADA "input"
@@ -27,9 +29,11 @@
 
 typedef unsigned long long int ulli;
 
-typedef enum {
-    MatrizM, MatrizN, MatrizR
-} Matriz;
+typedef struct filaImpressao{
+    int  Contagem;
+    char **NomeArquivos; //guarda o nome dos arquivos que serão inseridos
+    ulli **Fila;         //guarda as matrizes resultado da potenciação
+} FilaImpressao;
 
 typedef enum {
     Inicializa, Destroi

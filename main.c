@@ -1,11 +1,11 @@
 #include "main.h"
 
-sem_t mutex[3]; //semáforo para as threads;
+sem_t mutex[4]; //semáforo para as threads;
 ulli *m, *n, *mE10, *nE10, *r; //matrizes m e n, m elevado a 10 potencia, n elevado a decima potencia e r
+FilaImpressao *f;
 bool finalizou = false, finalizouCalculo = false, imprimindoR = false;
 ulli progresso = 0;
 char strProgresso[BUFFER_BARRA_PROGRESSO] = BARRA_DE_PROGRESSO;
-Matriz matrizAImprimir;
 
 double calculaOTempoEmSegundos(struct timespec t1, struct timespec t2) {
     return (((NANO_SEGUNDO_PARA_SEGUNDO) * (t2.tv_sec - t1.tv_sec) +
@@ -25,6 +25,13 @@ ulli *copiarMatriz(ulli *entrada, size_t tamanhoMatriz) {
     memcpy(ret, entrada, tamanhoMatriz);
 
     return ret;
+}
+
+void imprimeEspacador(int vezes) {
+    for(int i = 0; i < vezes; i++){
+        printf("\n");
+        sleep(1);
+    }
 }
 
 void imprimeMatriz(ulli *r){
@@ -51,11 +58,55 @@ void imprimeMatriz(ulli *r){
 
 double calcularProgresso()
 {
-    double ret = ((((progresso) / ((N * N * N * 19.0))) * (100)));
+    ulli maxOperacoes = MAX_OPERACOES;
+    double ret = ((((progresso) / ((maxOperacoes * 19.0))) * (100)));
     int posicaoBarra = (int) round(((ret * 50) / (100)));
 
     for(int i = 1; i <= posicaoBarra; i++)
         strProgresso[i] = '#';
+
+    return ret;
+}
+
+//adiciona uma matriz a fila de impressão f
+void AdicionarAFilaDeImpressao(FilaImpressao *f, ulli *matriz, 
+                                            char *nomeArquivo) {
+
+    ulli *paraInserir = copiarMatriz(matriz,  sizeof(ulli) * N*N );
+
+    if(f->Contagem < MAX_ELEMENTOS_FILA_IMPRESSAO) {
+        for(int i = 0; i <= f->Contagem; i++) 
+            if(i == f->Contagem) {
+                f->Fila[i] = paraInserir; 
+                f->NomeArquivos[i] = nomeArquivo;
+            }
+                
+        f->Contagem++;
+    }
+}
+
+//remove o primeiro elemento da fila de impressão f, seu valor é atribuido
+//ao ponteiro ret
+ulli *RemoverFilaDeImpressao(FilaImpressao *f, char *nomeArquivo) {
+
+    ulli *ret = NULL;
+
+    if(f->Contagem > 0) {
+
+        ret = copiarMatriz(f->Fila[0],  sizeof(ulli) * N*N);
+        strcpy(nomeArquivo, f->NomeArquivos[0]);
+
+        if(f->Fila[0] != NULL)
+            free(f->Fila[0]);
+
+        if(f->NomeArquivos[0] != NULL)
+            free(f->NomeArquivos[0]);
+
+        for(int i = 1; i < f->Contagem; i++)
+            f->Fila[i - 1] = f->Fila[i];
+
+        f->Contagem--;
+    }
 
     return ret;
 }
@@ -187,11 +238,21 @@ ulli *potenciaMatriz(char *nomeMatriz, ulli n[N*N], ulli potencia){
 
     ulli *tmp;
     ulli *resul = copiarMatriz(n, sizeof(ulli) * N*N);
+    char contadorItrStr[TAMANHO_BUFFER_STR_NUMERICA];
 
     for(int i=1; i<potencia; i++) {
         tmp = multiplicaMatriz(n, resul);
         free(resul);
         resul = tmp;
+
+        sem_wait(&mutex[3]);
+
+        sprintf(contadorItrStr, "%d", i+1);
+        char *nomeArquivo = concatenarStrings(3, nomeMatriz, contadorItrStr, 
+                                                                    ".dat");
+        AdicionarAFilaDeImpressao(f, resul, nomeArquivo);
+
+        sem_post(&mutex[3]);
     }
     
     return resul;
@@ -238,15 +299,27 @@ void *tImprimeArquivos(void *args){
             imprimindoR = false;
 
             break;
-        }
+        } else {
 
-        //sprintf(contadorItrStr, "%d", i+1);
-        //char *nomeArquivo = concatenarStrings(4, nomeMatriz, "_", contadorItrStr, 
-        //                                                                ".dat");
-        //                                                                
-        //escreverArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
-        //                                      OUTPUT_DIR, filename), resul);
-        //    char contadorItrStr[TAMANHO_BUFFER_STR_NUMERICA];
+            sem_wait(&mutex[3]);
+            char contadorItrStr[TAMANHO_BUFFER_STR_NUMERICA];
+            while(f->Contagem > 0) {
+
+                char *nomeArquivo = (char *) calloc(TAMANHO_BUFFER_STRING, 
+                                                            sizeof(char));
+                ulli *matriz = RemoverFilaDeImpressao(f, nomeArquivo);
+
+                if(matriz != NULL && nomeArquivo != NULL) {
+                    escreverArquivoDeMatriz(combinarDiretorios(3, 
+                          pegarDiretorioAtual(), DIRETORIO_SAIDA, 
+                                           nomeArquivo), matriz);
+                    free(matriz);
+                    free(nomeArquivo);
+                }
+            }
+            
+            sem_post(&mutex[3]);
+        }
     }
 }
 
@@ -256,11 +329,11 @@ void *tPotencializao(void *args) {
     sem_wait(&mutex[2]); //bloqueia a thread que calcula o resultado final até que tenha-se M e N potenciado.
 
     sem_wait(&mutex[0]); //aguarda M
-    mE10 = potenciaMatriz(NOME_ARQUIVO_M, m, POTENCIA);
+    mE10 = potenciaMatriz("m", m, POTENCIA);
     sem_post(&mutex[0]);
 
     sem_wait(&mutex[1]); //aguarda N
-    nE10 = potenciaMatriz(NOME_ARQUIVO_N, n, POTENCIA);
+    nE10 = potenciaMatriz("n", n, POTENCIA);
     sem_post(&mutex[1]);
     
     sem_post(&mutex[2]);
@@ -277,7 +350,7 @@ void *tCalculaR(void *args) { //1.000.000.000
 }
 
 void gerenciaSemaforos(ComandoSemaforo comando) {
-    for(int i = 0; i < 3; i++) {
+    for(int i = 0; i < 4; i++) {
         if(comando == Inicializa)
             sem_init(&mutex[i], 0, 1);
         else if(comando == Destroi)
@@ -292,6 +365,22 @@ int main(int argc, char *argv[]) {
 
     clock_gettime(CLOCK_MONOTONIC, &inicioProcessamento); //pega o tempo inicial
 
+    f = (FilaImpressao*) calloc(1, sizeof(FilaImpressao));
+
+    if(!f) {
+        fprintf(stderr, "Erro de alocação!");
+        exit(EXIT_FAILURE);
+    }
+
+    f->Fila = (ulli**) calloc(MAX_ELEMENTOS_FILA_IMPRESSAO, sizeof(ulli*));
+    f->NomeArquivos = (char**) calloc(MAX_ELEMENTOS_FILA_IMPRESSAO, 
+                                                    sizeof(char*));
+
+    if(!f->Fila || !f->NomeArquivos) {
+        fprintf(stderr, "Erro de alocação!");
+        exit(EXIT_FAILURE);
+    }
+
     gerenciaSemaforos(Inicializa);
 
     pthread_create(&t1,NULL,tCarregarMatrizes, (void*)(0));
@@ -304,7 +393,7 @@ int main(int argc, char *argv[]) {
     while(true) {
         if(!imprimindoR) {
             double progressoAtual = calcularProgresso();
-            printf("\r%s %.2f %%\r", strProgresso, progressoAtual);
+            printf("\r%s %.2f %% Processado\r", strProgresso, progressoAtual);
             fflush(stdout);
             if(finalizou)
                 break;
@@ -318,11 +407,18 @@ int main(int argc, char *argv[]) {
 
     gerenciaSemaforos(Destroi);
 
-    
     clock_gettime(CLOCK_MONOTONIC, &fimProcessamento); //marca o fim da execução
-    
-    printf("\rCalculo Finalizado! Tempo de execução: [%.2f segundos]\r\n", 
+
+    imprimeEspacador(2);
+
+    printf("\nCalculo Finalizado! Tempo de execução: [%.2f segundos]\n", 
           calculaOTempoEmSegundos(inicioProcessamento, fimProcessamento));
+    
+    imprimeEspacador(2);
+
+    printf("Pressione qualquer tecla para continuar... ");
+
+    getchar();
 
     return 0;
 }

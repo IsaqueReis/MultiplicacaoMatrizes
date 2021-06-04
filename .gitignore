@@ -1,5 +1,4 @@
-*.out
-test
-*.dat
+*.out 
+multipilica-matrizes
 *.o
 
