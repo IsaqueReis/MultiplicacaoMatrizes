@@ -12,11 +12,16 @@
 #include <math.h>
 
 #define N 5000
-#define MAX_OPERACOES 125000000000
 #define POTENCIA 10
 #define BUFFER_BARRA_PROGRESSO 53
 #define NANO_SEGUNDO_PARA_SEGUNDO 1000000000
-#define MAX_ELEMENTOS_FILA_IMPRESSAO 20
+#define MAX_ELEMENTOS_FILA_IMPRESSAO 18
+
+#define CONTAGEM_MUTEX 4
+#define MUTEX_FINALIZA_CALCULO 0
+#define MUTEX_IMPRIME_R 1
+#define MUTEX_PROGRESSO 2
+#define MUTEX_OPERACAO_FILA 3
 
 #define DIRETORIO_SAIDA "output"
 #define DIRETORIO_ENTRADA "input"
@@ -34,6 +39,10 @@ typedef struct filaImpressao{
     char **NomeArquivos; //guarda o nome dos arquivos que serão inseridos
     ulli **Fila;         //guarda as matrizes resultado da potenciação
 } FilaImpressao;
+
+typedef struct argumentosThread {
+    char nomeDaMatriz[TAMANHO_BUFFER_STRING];
+} ArgumentosThread;
 
 typedef enum {
     Inicializa, Destroi
