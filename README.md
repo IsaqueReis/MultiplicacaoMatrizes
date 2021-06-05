@@ -5,7 +5,7 @@ Comparar o desempenho de processamento simétrico (SMP) vs. Assimétrico (ASMP).
 Antes de rodar o script, é interessante que toda a pasta tenha permissão de criar e remover arquivos no diretorio, de qualquer forma
 ao digitar, o programa é compilado e executado.
 
-    $ sudo ./compile-and-execute.sh
+    $sudo ./compile-and-execute.sh
   
 # Observações Gerais 
 
