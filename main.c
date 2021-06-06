@@ -14,11 +14,14 @@
 
 sem_t mutex[CONTAGEM_MUTEX];   //semáforo para as threads;
 ulli *m, *n, *mE10, *nE10, *r; //matrizes m e n, m elevado a 10 potencia, n elevado a decima potencia e r
+ulli progresso = 0;
+
 FilaImpressao *f;
+
 bool finalizouPotenciacaoM = false, finalizouPotenciacaoN = false, 
      finalizouR = false, finalizou = false, leuM = false, leuN = false;
+
 char strProgresso[BUFFER_BARRA_PROGRESSO] = BARRA_DE_PROGRESSO;
-ulli progresso = 0;
 
 double calculaOTempoEmSegundos(struct timespec t1, struct timespec t2) {
     return (((NANO_SEGUNDO_PARA_SEGUNDO) * (t2.tv_sec - t1.tv_sec) +
@@ -80,8 +83,7 @@ double calcularProgresso() {
 }
 
 //adiciona uma matriz a fila de impressão f
-void adicionarAFilaDeImpressao(FilaImpressao *f, ulli *matriz, 
-                                            char *nomeArquivo) {
+void adicionarAFilaDeImpressao(FilaImpressao *f, ulli *matriz, char *nomeArquivo) {
 
     ulli *paraInserir = copiarMatriz(matriz,  sizeof(ulli) * N*N );
 
@@ -377,6 +379,69 @@ void gerenciaSemaforos(ComandoSemaforo comando) {
     } 
 }
 
+int threadAffinity(pthread_t tid, int numProcessLog){
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(numProcessLog, &cpuset);
+  
+    return !pthread_setaffinity_np(tid, sizeof(cpuset), &cpuset);
+}
+
+int ehRetornaNumero(char *str){
+    int res = 0;
+    
+    for(int i = 0; str[i]; i++)
+        if (!isdigit(str[i]))
+            return -1;
+
+    return atoi(str);
+}
+
+int processorAffinityTodosProcessos(int numIniProcessLog, int numFinProcessLog){
+    cpu_set_t cpuset;
+    DIR *dirProc;
+    struct dirent *dir;
+    int meuPid;
+    char *erro;
+
+    // iniciando a mascara que contem as cpus que serao utilizadas pelos processos
+    CPU_ZERO(&cpuset);
+    for(int i = numIniProcessLog; i <= numFinProcessLog; i++)
+        CPU_SET(i, &cpuset);
+
+    // o diretorio proc contem os pids com os processos em execucao
+    dirProc = opendir("/proc");
+    if(dirProc == NULL)
+        return 0;
+    
+    int primeiroErro = 1;
+    while( (dir = readdir(dirProc)) != NULL){
+        meuPid = ehRetornaNumero(dir->d_name);
+        if(meuPid >= 0){
+            int resul = sched_setaffinity(meuPid, sizeof(cpu_set_t), &cpuset);
+            if(resul == -1){
+                if (errno != EINVAL){
+                    erro = strerror(errno);
+                    fprintf(stderr, "Erro %d - Processo %d: %s\n", errno, meuPid, erro);
+                    exit(EXIT_FAILURE);
+                }
+                if(primeiroErro){
+                    //Não é possivel alterar o processor affinity de Processos do Kernel
+                    erro = strerror(errno);
+                    printf("Os seguintes processos não podem ter o process afinnity alterado (%s) \n Processos: ", erro);
+                    primeiroErro = 0;
+                }
+                printf("%d ", meuPid);
+            }
+        }
+    }
+    printf("\n");
+    
+    closedir(dirProc);
+    return 1;
+}
+
+
 int main(int argc, char *argv[]) {
 
     pthread_t t1, t2, t3, t4;
@@ -411,6 +476,41 @@ int main(int argc, char *argv[]) {
     pthread_create(&t3,NULL,tCpuBound, &argumentosTM);
     pthread_create(&t4,NULL,tCpuBound, &argumentosTN);
 
+    if(USAR_PROCESSOR_AFFINITY){
+	    //verificar quantos processadores lógicos existem na cpu, se tiver mais de 4 ok, se não retorna erro
+        if(procesadoresLogicos < 4){
+            fprintf(stderr, "Erro, quantidade de processadores lógicos menor que o mínimo exigido!");
+            exit(EXIT_FAILURE);
+        }
+        
+        //processor afinitty das threads CPU bound e IO bound
+        ok = 1;
+        ok &= threadAffinity(t1, 0);
+        ok &= threadAffinity(t2, 1);
+        ok &= threadAffinity(t3, 2);
+        ok &= threadAffinity(t4, 3);
+
+        if(ok){
+            printf("Afinidade de processadores lógicos para as threads foram configuradas\n");
+        } else {
+            fprintf(stderr, "Erro ao configurar a afinidade de processadores lógicos para as threads!\n");
+            exit(EXIT_FAILURE);
+        }
+        // coloca o processor affnity para em todos os processos do sistema
+        // nos processadores restantes
+        if(procesadoresLogicos == 4){
+            if(!processorAffinityTodosProcessos(3, 3)){
+                fprintf(stderr, "Erro ao obter os pids dos processos em execução!\n");
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            if(!processorAffinityTodosProcessos(4, procesadoresLogicos - 1)){
+                fprintf(stderr, "Erro ao obter os pids dos processos em execução!\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+
     while(true) {
         double progressoAtual = calcularProgresso();
         printf("\r%s %.2f %% Processado\r", strProgresso, progressoAtual);
@@ -422,10 +522,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    pthread_join(t1,NULL);
-    pthread_join(t2,NULL);
-    pthread_join(t3,NULL);
-    pthread_join(t4,NULL);
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+    pthread_join(t3, NULL);
+    pthread_join(t4, NULL);
 
     gerenciaSemaforos(Destroi);
 
