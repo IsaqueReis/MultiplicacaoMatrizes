@@ -69,8 +69,7 @@ void imprimeMatriz(ulli *r){
     }
 }
 
-double calcularProgresso()
-{
+double calcularProgresso() {
     double ret = ((((progresso) / ((N * 19.0))) * (100)));
     int posicaoBarra = (int) floor(((ret * 50) / (100)));
 
@@ -342,7 +341,6 @@ void *tCpuBound(void *args) {
 
     if(!strcmp(tArgs->nomeDaMatriz, "m")) {
         mE10 = potenciaMatriz("m", m, POTENCIA);
-
         finalizouPotenciacaoM = true;
     }
     
