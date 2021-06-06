@@ -16,7 +16,7 @@ sem_t mutex[CONTAGEM_MUTEX];   //semáforo para as threads;
 ulli *m, *n, *mE10, *nE10, *r; //matrizes m e n, m elevado a 10 potencia, n elevado a decima potencia e r
 FilaImpressao *f;
 bool finalizouPotenciacaoM = false, finalizouPotenciacaoN = false, 
-     finalizouR = false, finalizou = false;
+     finalizouR = false, finalizou = false, leuM = false, leuN = false;
 char strProgresso[BUFFER_BARRA_PROGRESSO] = BARRA_DE_PROGRESSO;
 ulli progresso = 0;
 
@@ -290,6 +290,20 @@ void esvaziaFilaDeImpressao() {
 
 void *tIoBound(void *args){
 
+    ArgumentosThread *tArgs = (ArgumentosThread*) args;
+
+    if(!strcmp(tArgs->nomeDaMatriz, "m")) {
+        m = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
+                                      DIRETORIO_ENTRADA, NOME_ARQUIVO_M));
+        leuM = true;
+    }
+    
+    if(!strcmp(tArgs->nomeDaMatriz, "n")) {
+        n = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
+                                      DIRETORIO_ENTRADA, NOME_ARQUIVO_N));
+        leuN = true;
+    }
+
     while(true) {
         
         if(calcularProgresso() >= 100.0) {
@@ -321,8 +335,14 @@ void *tCpuBound(void *args) {
     
     ArgumentosThread *tArgs = (ArgumentosThread*) args;
 
+    while(true) {
+        if(leuM && leuN)
+            break;
+    }
+
     if(!strcmp(tArgs->nomeDaMatriz, "m")) {
         mE10 = potenciaMatriz("m", m, POTENCIA);
+
         finalizouPotenciacaoM = true;
     }
     
@@ -363,8 +383,8 @@ int main(int argc, char *argv[]) {
 
     pthread_t t1, t2, t3, t4;
     struct timespec inicioProcessamento, fimProcessamento; 
-    ArgumentosThread argumentosTCpuBound1 = {"m"};
-    ArgumentosThread argumentosTCpuBound2 = {"n"};
+    ArgumentosThread argumentosTM = {"m"};
+    ArgumentosThread argumentosTN = {"n"};
 
     clock_gettime(CLOCK_MONOTONIC, &inicioProcessamento); //pega o tempo inicial
 
@@ -384,20 +404,14 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    m = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
-                                  DIRETORIO_ENTRADA, NOME_ARQUIVO_M));
-
-    n = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
-                                  DIRETORIO_ENTRADA, NOME_ARQUIVO_N));
-
     gerenciaSemaforos(Inicializa);
 
     printf("Inicializando o cálculo de potenciação de matrizes [R = M^10 * N^10]...\n");
 
-    pthread_create(&t1,NULL,tIoBound,  (void*)(0));
-    pthread_create(&t2,NULL,tIoBound,  (void*)(0));
-    pthread_create(&t3,NULL,tCpuBound, &argumentosTCpuBound1);
-    pthread_create(&t4,NULL,tCpuBound, &argumentosTCpuBound2);
+    pthread_create(&t1,NULL,tIoBound,  &argumentosTM);
+    pthread_create(&t2,NULL,tIoBound,  &argumentosTN);
+    pthread_create(&t3,NULL,tCpuBound, &argumentosTM);
+    pthread_create(&t4,NULL,tCpuBound, &argumentosTN);
 
     while(true) {
         double progressoAtual = calcularProgresso();
