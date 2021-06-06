@@ -1,16 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include "utilidades.h"
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <stdbool.h>
-#include <math.h>
-
 #define N 5000
 #define POTENCIA 10
 #define BUFFER_BARRA_PROGRESSO 53

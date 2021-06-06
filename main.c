@@ -1,6 +1,18 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include "utilidades.h"
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdbool.h>
+#include <math.h>
 #include "main.h"
 
-sem_t mutex[CONTAGEM_MUTEX]; //semáforo para as threads;
+sem_t mutex[CONTAGEM_MUTEX];   //semáforo para as threads;
 ulli *m, *n, *mE10, *nE10, *r; //matrizes m e n, m elevado a 10 potencia, n elevado a decima potencia e r
 FilaImpressao *f;
 bool finalizouPotenciacaoM = false, finalizouPotenciacaoN = false, 
@@ -69,7 +81,7 @@ double calcularProgresso()
 }
 
 //adiciona uma matriz a fila de impressão f
-void AdicionarAFilaDeImpressao(FilaImpressao *f, ulli *matriz, 
+void adicionarAFilaDeImpressao(FilaImpressao *f, ulli *matriz, 
                                             char *nomeArquivo) {
 
     ulli *paraInserir = copiarMatriz(matriz,  sizeof(ulli) * N*N );
@@ -87,7 +99,7 @@ void AdicionarAFilaDeImpressao(FilaImpressao *f, ulli *matriz,
 
 //remove o primeiro elemento da fila de impressão f, seu valor é atribuido
 //ao ponteiro ret
-ulli *RemoverFilaDeImpressao(FilaImpressao *f, char *nomeArquivo) {
+ulli *removerFilaDeImpressao(FilaImpressao *f, char *nomeArquivo) {
 
     ulli *ret = NULL;
 
@@ -95,7 +107,10 @@ ulli *RemoverFilaDeImpressao(FilaImpressao *f, char *nomeArquivo) {
 
         ret = copiarMatriz(f->Fila[0],  sizeof(ulli) * N*N);
         strcpy(nomeArquivo, f->NomeArquivos[0]);
-
+        
+        if(f->Fila[0] != NULL)
+            free(f->Fila[0]);
+            
         for(int i = 1; i < f->Contagem; i++) {
             f->Fila[i - 1] = f->Fila[i];
             strcpy(f->NomeArquivos[i - 1], f->NomeArquivos[i]);
@@ -248,7 +263,7 @@ ulli *potenciaMatriz(char *nomeMatriz, ulli n[N*N], ulli potencia){
         char *nomeArquivo = concatenarStrings(3, nomeMatriz, contadorItrStr, ".dat");
 
         sem_wait(&mutex[MUTEX_OPERACAO_FILA]); //bloqueia a fila de impressão para liberação de novas entradas
-        AdicionarAFilaDeImpressao(f, resul, nomeArquivo);
+        adicionarAFilaDeImpressao(f, resul, nomeArquivo);
         sem_post(&mutex[MUTEX_OPERACAO_FILA]); //libera a fila de impressão para liberação de novas entradas
     }
     
@@ -262,7 +277,7 @@ void esvaziaFilaDeImpressao() {
         char *nomeArquivo = (char *) calloc(TAMANHO_BUFFER_STRING, sizeof(char));
 
         sem_wait(&mutex[MUTEX_OPERACAO_FILA]); //aguarda alguma operação na fila de impressão
-        ulli *matriz = RemoverFilaDeImpressao(f, nomeArquivo);
+        ulli *matriz = removerFilaDeImpressao(f, nomeArquivo);
         sem_post(&mutex[MUTEX_OPERACAO_FILA]); //libera a fila de impressão para recepção de novas entradas
 
         if(matriz != NULL && nomeArquivo != NULL) {
@@ -277,7 +292,7 @@ void *tIoBound(void *args){
 
     while(true) {
         
-        if(calcularProgresso() == 100.0) {
+        if(calcularProgresso() >= 100.0) {
 
             sem_wait(&mutex[MUTEX_IMPRIME_R]); //duas threads competem para ver quem finaliza primeiro...
 
