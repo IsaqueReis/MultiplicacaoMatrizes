@@ -1,15 +1,27 @@
+/*
+  ps -mo pid,tid -a -A
+  taskset -cp numero pid/tid
+*/
+
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include "utilidades.h"
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdbool.h>
 #include <math.h>
+#include <sched.h>
+#include <dirent.h>
+#include <errno.h>
+
+#include "utilidades.h"
 #include "main.h"
 
 sem_t mutex[CONTAGEM_MUTEX];   //semáforo para as threads;
@@ -443,11 +455,15 @@ int processorAffinityTodosProcessos(int numIniProcessLog, int numFinProcessLog){
 
 
 int main(int argc, char *argv[]) {
-
     pthread_t t1, t2, t3, t4;
     struct timespec inicioProcessamento, fimProcessamento; 
     ArgumentosThread argumentosTM = {"m"};
     ArgumentosThread argumentosTN = {"n"};
+
+    long int procesadoresLogicos = sysconf(_SC_NPROCESSORS_CONF);
+    int ok;
+    
+    printf("%d\n",getpid());
 
     clock_gettime(CLOCK_MONOTONIC, &inicioProcessamento); //pega o tempo inicial
 
@@ -532,9 +548,12 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &fimProcessamento); //marca o fim da execução
 
     imprimeEspacador(2);
+    
+    int tempoGasto = (int) calculaOTempoEmSegundos(inicioProcessamento, fimProcessamento);
+    int minutos = (int) tempoGasto/60;
+    int horas = (int) minutos/60;
 
-    printf("\nCalculo Finalizado! Tempo de execução: [%.2f horas]\n", 
-          calculaOTempoEmSegundos(inicioProcessamento, fimProcessamento) / 3600);
+    printf("\nCalculo Finalizado! Tempo de execução no formato HH:MM:SS: %d:%d:%d\n", horas, minutos%60, tempoGasto%60);
     
     imprimeEspacador(2);
 
@@ -544,3 +563,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
