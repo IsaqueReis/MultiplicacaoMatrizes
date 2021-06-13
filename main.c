@@ -1,6 +1,8 @@
 /*
-  ps -mo pid,tid -a -A
-  taskset -cp numero pid/tid
+    11821BCC003 - André Luiz Morais Peres de Quinta
+    11811BSI247 - Isaque dos Reis
+    11521BSI258 - Luiz Sergio Amaral Resende
+    11911BCC039 - Vinícius Calixto Rocha
 */
 
 #define _GNU_SOURCE
@@ -24,9 +26,9 @@
 #include "utilidades.h"
 #include "main.h"
 
-sem_t mutex[CONTAGEM_MUTEX];   //semáforo para as threads;
-ulli *m, *n, *mE10, *nE10, *r; //matrizes m e n, m elevado a 10 potencia, n elevado a decima potencia e r
-ulli progresso = 0;
+sem_t mutex[CONTAGEM_MUTEX];   // semáforo para as threads;
+ulli *m, *n, *mE10, *nE10, *r; // matrizes m e n, m elevado a 10 potencia, n elevado a decima potencia e r
+ulli progresso = 0;            // contador usado para calcular o prograsso da aplicacao
 
 FilaImpressao *f;
 
@@ -35,12 +37,14 @@ bool finalizouPotenciacaoM = false, finalizouPotenciacaoN = false,
 
 char strProgresso[BUFFER_BARRA_PROGRESSO] = BARRA_DE_PROGRESSO;
 
+// retorna o tempo em segundos da diferença de dois timespec(segundos e nanosegundos)
 double calculaOTempoEmSegundos(struct timespec t1, struct timespec t2) {
     return (((NANO_SEGUNDO_PARA_SEGUNDO) * (t2.tv_sec - t1.tv_sec) +
            ((t2.tv_nsec) - (t1.tv_nsec))) / 
-           ((double) (NANO_SEGUNDO_PARA_SEGUNDO)));  //obtem o tempo em segundos
+           ((double) (NANO_SEGUNDO_PARA_SEGUNDO)));
 }
 
+// retorna uma cópia da matriz(ponteiro para uma região alocada dinamicamente)
 ulli *copiarMatriz(ulli *entrada, size_t tamanhoMatriz) {
 
     ulli *ret = (ulli *) calloc(1, tamanhoMatriz);
@@ -55,14 +59,15 @@ ulli *copiarMatriz(ulli *entrada, size_t tamanhoMatriz) {
     return ret;
 }
 
+// imprime n quebras de linha seguida por n sleeps de 1 segundo
 void imprimeEspacador(int vezes) {
-    for(int i = 0; i < vezes; i++){
+    for(int i = 0; i < vezes; i++) {
         printf("\n");
-        sleep(1);
     }
 }
 
-void imprimeMatriz(ulli *r){
+// imprime a matriz passada por argumento
+void imprimeMatriz(ulli *r) {
 
     int primeiro = 1;
 
@@ -84,6 +89,7 @@ void imprimeMatriz(ulli *r){
     }
 }
 
+// calcula o progresso atual multiplicando a variável progresso
 double calcularProgresso() {
     double ret = ((((progresso) / ((N * 19.0))) * (100)));
     int posicaoBarra = (int) floor(((ret * 50) / (100)));
@@ -94,7 +100,7 @@ double calcularProgresso() {
     return ret;
 }
 
-//adiciona uma matriz a fila de impressão f
+// adiciona uma matriz a fila de impressão f
 void adicionarAFilaDeImpressao(FilaImpressao *f, ulli *matriz, char *nomeArquivo) {
 
     ulli *paraInserir = copiarMatriz(matriz,  sizeof(ulli) * N*N );
@@ -110,8 +116,7 @@ void adicionarAFilaDeImpressao(FilaImpressao *f, ulli *matriz, char *nomeArquivo
     }
 }
 
-//remove o primeiro elemento da fila de impressão f, seu valor é atribuido
-//ao ponteiro ret
+// remove o primeiro elemento da fila de impressão f, seu valor é atribuido ao ponteiro ret
 ulli *removerFilaDeImpressao(FilaImpressao *f, char *nomeArquivo) {
 
     ulli *ret = NULL;
@@ -135,15 +140,14 @@ ulli *removerFilaDeImpressao(FilaImpressao *f, char *nomeArquivo) {
     return ret;
 }
 
+// cria o arquivo de matriz e o inicializa com números aleatórios de acordo com o definição N
 void inicializaArquivoDeMatriz(char *nomeArquivo){
 
     FILE *fp = fopen(nomeArquivo, "r");
 
     if(fp != NULL){ // o arquivo já existe
-        //printf("O arquivo de matriz %s já existe!Removendo...\n", filename);
         remove(nomeArquivo);
-        //printf("Arquivo removido com sucesso!\n");
-    } 
+    }
 
     fp = fopen(nomeArquivo, "a+");
 
@@ -152,7 +156,7 @@ void inicializaArquivoDeMatriz(char *nomeArquivo){
         exit(EXIT_FAILURE);
     }
 
-    //gera uma seed baseada no tempo atual e id da thread atual, em milisegundos
+    // gera uma seed baseada no tempo atual e id da thread atual, em milisegundos
     srand(time(NULL) * (int) pthread_self()); 
 
     for(int i = 0; i < N; i++) {
@@ -168,14 +172,13 @@ void inicializaArquivoDeMatriz(char *nomeArquivo){
     fclose(fp);
 }
 
+// escreve a estrutura de matriz no arquivo de nome passado nos argumentos
 void escreverArquivoDeMatriz(char *nomeArquivo, ulli *mtz){
 
     FILE *fp = fopen(nomeArquivo, "r");
 
     if(fp != NULL){ // o arquivo já existe
-        //printf("O arquivo de matriz %s já existe!Removendo...\n", filename);
         remove(nomeArquivo);
-        //printf("Arquivo removido com sucesso!\n");
     } 
 
     fp = fopen(nomeArquivo, "a+");
@@ -185,7 +188,7 @@ void escreverArquivoDeMatriz(char *nomeArquivo, ulli *mtz){
         exit(EXIT_FAILURE);
     }
 
-    srand(time(NULL)); //gera uma seed baseada no tempo atual em milisegundos
+    srand(time(NULL)); // gera uma seed baseada no tempo atual em milisegundos
 
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
@@ -200,6 +203,7 @@ void escreverArquivoDeMatriz(char *nomeArquivo, ulli *mtz){
     fclose(fp);
 }
 
+// realiza leitura de um arquivo de matriz e retorna ponteiro da estrutura da matriz presente no arquivo
 ulli *leArquivoDeMatriz(char *nomeArquivo){
 
     FILE *fp;
@@ -225,13 +229,14 @@ ulli *leArquivoDeMatriz(char *nomeArquivo){
             : fscanf(fp, "%llu,", &ret[k]); 
             k++;
         }
-        fgetc(fp); //le o '\n' e o descarta
+        fgetc(fp); // le o '\n' e o descarta
     }
     
     printf("Matriz lida do arquivo %s.\n", nomeArquivo);
     return ret;
 }
 
+// retorna o resultado da multiplicação das matrizes n e m
 ulli *multiplicaMatriz(ulli n[N*N], ulli m[N*N]){
 
     ulli *resul = (ulli *) malloc(sizeof(ulli) * N*N);
@@ -241,19 +246,24 @@ ulli *multiplicaMatriz(ulli n[N*N], ulli m[N*N]){
         return NULL;
     }
 
+    // inicializa todos os valores da matriz de resultado criada
     for(int i=0; i<N*N; i++)
         resul[i] = 0;
 
-    // i seleciona a iésima e j a jésima coluna da matriz resultante,
-    //      operações dadas por iterações de k que calculam o resultado aplicado a n e m.
+    // o primeiro laço seleciona as linhas
     for(int i=0; i<N; i++) {
+        // o segundo seleciona colunas
         for(int j=0; j<N; j++) {
+            // dado a linha e coluna selecionada para a matriz resul,
+            //      o terceiro laço realiza as iterações para soma de multiplicações em n e m
+            //      produzindo o resultado para o valor de resul selecionado
             for(int k=0; k<N; k++) {
                 resul[N*i + j] += n[N*i + k] * m[N*k + j];
             }
         }
 
-        sem_wait(&mutex[MUTEX_PROGRESSO]); //atualiza progresso das threads de forma sincronizada
+        // atualiza o progresso das threads de forma sincronizada
+        sem_wait(&mutex[MUTEX_PROGRESSO]);
         progresso++;
         sem_post(&mutex[MUTEX_PROGRESSO]);
     }
@@ -261,6 +271,7 @@ ulli *multiplicaMatriz(ulli n[N*N], ulli m[N*N]){
     return resul;
 }
 
+// retorna o resultado da potenciação da matriz n por um inteiro representando a potência
 ulli *potenciaMatriz(char *nomeMatriz, ulli n[N*N], ulli potencia){
 
     ulli *tmp;
@@ -272,26 +283,28 @@ ulli *potenciaMatriz(char *nomeMatriz, ulli n[N*N], ulli potencia){
         free(resul);
         resul = tmp;
 
+        // seleciona o arquivo a salvar e adiciona a fila de impressão de forma sincronizada
         sprintf(contadorItrStr, "%d", i+1);
         char *nomeArquivo = concatenarStrings(3, nomeMatriz, contadorItrStr, ".dat");
 
-        sem_wait(&mutex[MUTEX_OPERACAO_FILA]); //bloqueia a fila de impressão para liberação de novas entradas
+        sem_wait(&mutex[MUTEX_OPERACAO_FILA]); // bloqueia a fila de impressão para liberação de novas entradas
         adicionarAFilaDeImpressao(f, resul, nomeArquivo);
-        sem_post(&mutex[MUTEX_OPERACAO_FILA]); //libera a fila de impressão para liberação de novas entradas
+        sem_post(&mutex[MUTEX_OPERACAO_FILA]); // libera a fila de impressão para liberação de novas entradas
     }
     
     return resul;
 }
 
+// realiza remoção das matrizes presentes na fila de impressão f
 void esvaziaFilaDeImpressao() {
 
     while(f->Contagem > 0) {
 
         char *nomeArquivo = (char *) calloc(TAMANHO_BUFFER_STRING, sizeof(char));
 
-        sem_wait(&mutex[MUTEX_OPERACAO_FILA]); //aguarda alguma operação na fila de impressão
+        sem_wait(&mutex[MUTEX_OPERACAO_FILA]); // aguarda alguma operação na fila de impressão
         ulli *matriz = removerFilaDeImpressao(f, nomeArquivo);
-        sem_post(&mutex[MUTEX_OPERACAO_FILA]); //libera a fila de impressão para recepção de novas entradas
+        sem_post(&mutex[MUTEX_OPERACAO_FILA]); // libera a fila de impressão para recepção de novas entradas
 
         if(matriz != NULL && nomeArquivo != NULL) {
             escreverArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), DIRETORIO_SAIDA, nomeArquivo), matriz);
@@ -301,16 +314,19 @@ void esvaziaFilaDeImpressao() {
     }
 }
 
+// função que as threads IoBound são atribuidas, possui o fluxo com as operações de IO
 void *tIoBound(void *args){
 
     ArgumentosThread *tArgs = (ArgumentosThread*) args;
 
+    // leitura da matriz M
     if(!strcmp(tArgs->nomeDaMatriz, "m")) {
         m = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
                                       DIRETORIO_ENTRADA, NOME_ARQUIVO_M));
         leuM = true;
     }
     
+    // leitura da matriz N
     if(!strcmp(tArgs->nomeDaMatriz, "n")) {
         n = leArquivoDeMatriz(combinarDiretorios(3, pegarDiretorioAtual(), 
                                       DIRETORIO_ENTRADA, NOME_ARQUIVO_N));
@@ -319,9 +335,11 @@ void *tIoBound(void *args){
 
     while(true) {
         
+        // escrita do resultado se o progresso estiver concluido
         if(calcularProgresso() >= 100.0) {
 
-            sem_wait(&mutex[MUTEX_IMPRIME_R]); //duas threads competem para ver quem finaliza primeiro...
+            // sincronização das duas threads para que apenas uma imprima R
+            sem_wait(&mutex[MUTEX_IMPRIME_R]); 
 
             if(finalizou)
                 break;
@@ -333,7 +351,7 @@ void *tIoBound(void *args){
             imprimeMatriz(r);
             printf("\n");
 
-            finalizou = true; //só uma saí campeã
+            finalizou = true; // só uma saí campeã
 
             sem_post(&mutex[MUTEX_IMPRIME_R]);
 
@@ -344,6 +362,7 @@ void *tIoBound(void *args){
     }
 }
 
+// função que as threads CpuBound são atribuidas, possui o fluxo com as operações de multiplicação
 void *tCpuBound(void *args) {
     
     ArgumentosThread *tArgs = (ArgumentosThread*) args;
@@ -366,7 +385,7 @@ void *tCpuBound(void *args) {
     while(true) {
         if(finalizouPotenciacaoM && finalizouPotenciacaoN) {
 
-            //duas threads competem para ver quem finaliza primeiro...
+            // duas threads competem para ver quem finaliza primeiro...
             sem_wait(&mutex[MUTEX_FINALIZA_CALCULO]);
 
             if(finalizouR)
@@ -382,6 +401,7 @@ void *tCpuBound(void *args) {
     }
 }
 
+// Inicializa e destroi os semaforos da aplicação
 void gerenciaSemaforos(ComandoSemaforo comando) {
     for(int i = 0; i < CONTAGEM_MUTEX; i++) {
         if(comando == Inicializa)
@@ -391,14 +411,17 @@ void gerenciaSemaforos(ComandoSemaforo comando) {
     } 
 }
 
+// Define o thread affinty para o procesador 'numProcessLog'
 int threadAffinity(pthread_t tid, int numProcessLog){
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(numProcessLog, &cpuset);
+    cpu_set_t cpuset;  // mascara de affinidade
+    CPU_ZERO(&cpuset); // zera a mascara
+    CPU_SET(numProcessLog, &cpuset); //define 1 na mascara para o processador numProcessLog 
   
-    return !pthread_setaffinity_np(tid, sizeof(cpuset), &cpuset);
+    return !pthread_setaffinity_np(tid, sizeof(cpuset), &cpuset); //define afinidade para a thread
 }
 
+// retorna o número correspondente a string
+// caso a string nao seja numérica retorna -1
 int ehRetornaNumero(char *str){
     int res = 0;
     
@@ -409,8 +432,10 @@ int ehRetornaNumero(char *str){
     return atoi(str);
 }
 
-int processorAffinityTodosProcessos(int numIniProcessLog, int numFinProcessLog){
-    cpu_set_t cpuset;
+// define o processor affinite para todos os processos do sistemas
+// para os processadores no intervalo [numIniProcessLog, numFimProcessLog]
+int processorAffinityTodosProcessos(int numIniProcessLog, int numFimProcessLog){
+    cpu_set_t cpuset; // mascara para a afinidade
     DIR *dirProc;
     struct dirent *dir;
     int meuPid;
@@ -418,7 +443,7 @@ int processorAffinityTodosProcessos(int numIniProcessLog, int numFinProcessLog){
 
     // iniciando a mascara que contem as cpus que serao utilizadas pelos processos
     CPU_ZERO(&cpuset);
-    for(int i = numIniProcessLog; i <= numFinProcessLog; i++)
+    for(int i = numIniProcessLog; i <= numFimProcessLog; i++)
         CPU_SET(i, &cpuset);
 
     // o diretorio proc contem os pids com os processos em execucao
@@ -430,15 +455,19 @@ int processorAffinityTodosProcessos(int numIniProcessLog, int numFinProcessLog){
     while( (dir = readdir(dirProc)) != NULL){
         meuPid = ehRetornaNumero(dir->d_name);
         if(meuPid >= 0){
+            // define o processor affinity para o processo com  o pid correspondente
             int resul = sched_setaffinity(meuPid, sizeof(cpu_set_t), &cpuset);
-            if(resul == -1){
+            if(resul == -1){ 
+                // Algum error ocorreu definir o processor affinity
+                // Definimos que encerraremos o programa caso aponte diferente de EINVAL
+                // Ex: Erros de privilegios não apropiados encerram o programa 
                 if (errno != EINVAL){
                     erro = strerror(errno);
                     fprintf(stderr, "Erro %d - Processo %d: %s\n", errno, meuPid, erro);
                     exit(EXIT_FAILURE);
                 }
                 if(primeiroErro){
-                    //Não é possivel alterar o processor affinity de Processos do Kernel
+                    // Não é possivel alterar o processor affinity de Processos do Kernel
                     erro = strerror(errno);
                     printf("Os seguintes processos não podem ter o process afinnity alterado (%s) \n Processos: ", erro);
                     primeiroErro = 0;
@@ -453,7 +482,6 @@ int processorAffinityTodosProcessos(int numIniProcessLog, int numFinProcessLog){
     return 1;
 }
 
-
 int main(int argc, char *argv[]) {
     pthread_t t1, t2, t3, t4;
     struct timespec inicioProcessamento, fimProcessamento; 
@@ -465,7 +493,7 @@ int main(int argc, char *argv[]) {
     
     printf("%d\n",getpid());
 
-    clock_gettime(CLOCK_MONOTONIC, &inicioProcessamento); //pega o tempo inicial
+    clock_gettime(CLOCK_MONOTONIC, &inicioProcessamento); // pega o tempo inicial
 
     f = (FilaImpressao*) calloc(1, sizeof(FilaImpressao));
 
@@ -493,13 +521,13 @@ int main(int argc, char *argv[]) {
     pthread_create(&t4,NULL,tCpuBound, &argumentosTN);
 
     if(USAR_PROCESSOR_AFFINITY){
-	    //verificar quantos processadores lógicos existem na cpu, se tiver mais de 4 ok, se não retorna erro
+	    // verificar quantos processadores lógicos existem na cpu, se tiver mais de 4 ok, se não retorna erro
         if(procesadoresLogicos < 4){
             fprintf(stderr, "Erro, quantidade de processadores lógicos menor que o mínimo exigido!");
             exit(EXIT_FAILURE);
         }
         
-        //processor afinitty das threads CPU bound e IO bound
+        // processor afinitty das threads CPU bound e IO bound
         ok = 1;
         ok &= threadAffinity(t1, 0);
         ok &= threadAffinity(t2, 1);
@@ -527,14 +555,19 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Aguarda até realizar a leitura das matrizes para então iniciar a barra de progresso
+    while(!leuM || !leuN)
+        ;
+
     while(true) {
         double progressoAtual = calcularProgresso();
+        // imprime barra de carregamento
         printf("\r%s %.2f %% Processado\r", strProgresso, progressoAtual);
         fflush(stdout);
 
         if(progressoAtual >= 100.0) {
             esvaziaFilaDeImpressao();
-            break; 
+            break;
         }
     }
 
@@ -545,7 +578,7 @@ int main(int argc, char *argv[]) {
 
     gerenciaSemaforos(Destroi);
 
-    clock_gettime(CLOCK_MONOTONIC, &fimProcessamento); //marca o fim da execução
+    clock_gettime(CLOCK_MONOTONIC, &fimProcessamento); // marca o fim da execução
 
     imprimeEspacador(2);
     
@@ -563,4 +596,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
